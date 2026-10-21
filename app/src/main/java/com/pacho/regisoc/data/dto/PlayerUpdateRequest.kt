@@ -1,0 +1,17 @@
+package com.pacho.regisoc.data.dto
+
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class PlayerUpdateRequest(
+    @SerialName("firstName") val firstName: String,
+    @SerialName("lastName") val lastName: String,
+    @SerialName("documentNumber") val documentNumber: String,
+    val age: Int,
+    @SerialName("dateOfBirth") val dateOfBirth: String,
+    val position: PlayerPosition? = null,
+    @SerialName("photoUrl") val photoUrl: String? = null,
+    @SerialName("documentFrontUrl") val documentFrontUrl: String? = null,
+    @SerialName("documentBackUrl") val documentBackUrl: String? = null
+)

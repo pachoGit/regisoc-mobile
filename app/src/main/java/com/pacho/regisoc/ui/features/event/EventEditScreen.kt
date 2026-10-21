@@ -1,0 +1,71 @@
+package com.pacho.regisoc.ui.features.event
+
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
+import com.pacho.regisoc.data.dto.EventResponse
+import com.pacho.regisoc.data.dto.EventStatus
+import com.pacho.regisoc.domain.validation.EventValidator
+import com.pacho.regisoc.ui.layouts.MainLayout
+
+@Composable
+fun EventEditScreen(
+    event: EventResponse,
+    onSave: (EventFormState) -> Unit,
+    onBack: () -> Unit,
+    onTabSelected: (Int) -> Unit
+) {
+    var formState by remember { mutableStateOf(EventFormState.fromEvent(event)) }
+
+    MainLayout(
+        title = "Editar Evento",
+        onBackClick = onBack,
+        selectedTab = 1,
+        onTabSelected = onTabSelected,
+        actions = {
+            TextButton(
+                onClick = {
+                    val validation = EventValidator.validate(
+                        title = formState.title,
+                        startDate = formState.startDate
+                    )
+                    if (validation.isValid) onSave(formState)
+                    else formState = formState.copy(errors = validation.errors)
+                }
+            ) {
+                Text("Guardar", style = MaterialTheme.typography.titleMedium)
+            }
+        }
+    ) {
+        EventFormBody(
+            formState = formState,
+            onValueChange = { formState = it },
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+        )
+    }
+}
+
+private val previewEditEvent = EventResponse(
+    id = 1,
+    // clubId = 1,
+    name = "Torneo Apertura 2026",
+    description = "Torneo de fútbol juvenil",
+    location = "Estadio Central",
+    startDate = "2026-08-01",
+    endDate = "2026-09-15",
+    status = EventStatus.ONGOING
+)
+
+@Preview
+@Composable
+private fun EventEditScreenPreview() {
+    MaterialTheme {
+        EventEditScreen(event = previewEditEvent, onSave = {}, onBack = {}, onTabSelected = {})
+    }
+}

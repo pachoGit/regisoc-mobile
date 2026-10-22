@@ -7,7 +7,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.SportsSoccer
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -23,6 +23,10 @@ import com.pacho.regisoc.data.dto.ClubResponse
 import com.pacho.regisoc.data.dto.MatchDateResponse
 import com.pacho.regisoc.data.dto.MatchDateStatus
 import com.pacho.regisoc.data.dto.MatchResponse
+import com.pacho.regisoc.domain.policy.MatchDateActionPolicy
+import com.pacho.regisoc.domain.policy.MatchDateActions
+import com.pacho.regisoc.domain.policy.myClub
+import com.pacho.regisoc.domain.policy.rivalClub
 import com.pacho.regisoc.ui.components.InfoRow
 import com.pacho.regisoc.ui.components.InfoSection
 import com.pacho.regisoc.ui.layouts.MainLayout
@@ -30,10 +34,17 @@ import com.pacho.regisoc.ui.layouts.MainLayout
 @Composable
 fun MatchDateDetailScreen(
     matchDate: MatchDateResponse,
+    myClubId: Long,
     onBack: () -> Unit,
     onTabSelected: (Int) -> Unit,
-    onOpenLineup: () -> Unit = {}
+    onRegisterLineup: () -> Unit = {},
+    onViewMyLineup: () -> Unit = {},
+    onViewRivalLineup: () -> Unit = {}
 ) {
+    val actions = MatchDateActionPolicy.actionsFor(matchDate, myClubId)
+    val myClub = matchDate.myClub(myClubId)
+    val rival = matchDate.rivalClub(myClubId)
+
     MainLayout(
         title = "Detalle de la Fecha",
         onBackClick = onBack,
@@ -48,7 +59,7 @@ fun MatchDateDetailScreen(
         ) {
             Spacer(modifier = Modifier.height(24.dp))
 
-            MatchupHeader(matchDate = matchDate)
+            MatchupHeader(myClub = myClub, rival = rival)
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -56,21 +67,12 @@ fun MatchDateDetailScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            if (matchDate.match != null) {
-                Button(
-                    onClick = onOpenLineup,
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Group,
-                        contentDescription = null
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Ver o generar alineación")
-                }
-                Spacer(modifier = Modifier.height(24.dp))
-            }
+            LineupActionsSection(
+                actions = actions,
+                onRegisterLineup = onRegisterLineup,
+                onViewMyLineup = onViewMyLineup,
+                onViewRivalLineup = onViewRivalLineup
+            )
 
             InfoSection(title = "Información de la Fecha") {
                 InfoRow(label = "Estado", value = matchDate.status.displayLabel)
@@ -82,35 +84,13 @@ fun MatchDateDetailScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             InfoSection(title = "Mi Club") {
-                val club = matchDate.homeClub
-                if (club != null) {
-                    InfoRow(label = "Nombre", value = club.name)
-                    InfoRow(label = "Año de fundación", value = club.foundedYear?.toString() ?: "No registrado")
-                    InfoRow(label = "Estado", value = if (club.isActive) "Activo" else "Inactivo")
-                    val description = club.description
-                    if (!description.isNullOrBlank()) {
-                        InfoRow(label = "Descripción", value = description)
-                    }
-                } else {
-                    InfoRow(label = "Nombre", value = "No registrado")
-                }
+                ClubInfoRows(club = myClub)
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
             InfoSection(title = "Club Rival") {
-                val club = matchDate.awayClub
-                if (club != null) {
-                    InfoRow(label = "Nombre", value = club.name)
-                    InfoRow(label = "Año de fundación", value = club.foundedYear?.toString() ?: "No registrado")
-                    InfoRow(label = "Estado", value = if (club.isActive) "Activo" else "Inactivo")
-                    val description = club.description
-                    if (!description.isNullOrBlank()) {
-                        InfoRow(label = "Descripción", value = description)
-                    }
-                } else {
-                    InfoRow(label = "Nombre", value = "No registrado")
-                }
+                ClubInfoRows(club = rival)
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -125,12 +105,93 @@ fun MatchDateDetailScreen(
     }
 }
 
+/**
+ * Acciones disponibles sobre la planilla de esta fecha, de acuerdo al
+ * [com.pacho.regisoc.domain.policy.MatchDateActionPolicy].
+ */
+@Composable
+private fun LineupActionsSection(
+    actions: MatchDateActions,
+    onRegisterLineup: () -> Unit,
+    onViewMyLineup: () -> Unit,
+    onViewRivalLineup: () -> Unit
+) {
+    val hasActions = actions.canRegisterLineup ||
+        actions.canViewMyLineup ||
+        actions.canViewRivalLineup
+    if (!hasActions) return
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        if (actions.canRegisterLineup) {
+            Button(
+                onClick = onRegisterLineup,
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(imageVector = Icons.Default.Groups, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Registrar plantilla")
+            }
+        }
+
+        if (actions.canViewMyLineup) {
+            Button(
+                onClick = onViewMyLineup,
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(imageVector = Icons.Default.Groups, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Ver mi plantilla")
+            }
+        }
+
+        if (actions.canViewRivalLineup) {
+            OutlinedButton(
+                onClick = onViewRivalLineup,
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Groups,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Ver plantilla rival")
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+    }
+}
+
+@Composable
+private fun ClubInfoRows(club: ClubResponse?) {
+    if (club == null) {
+        InfoRow(label = "Nombre", value = "No registrado")
+        return
+    }
+    InfoRow(label = "Nombre", value = club.name)
+    InfoRow(label = "Año de fundación", value = club.foundedYear?.toString() ?: "No registrado")
+    InfoRow(label = "Estado", value = if (club.isActive) "Activo" else "Inactivo")
+    val description = club.description
+    if (!description.isNullOrBlank()) {
+        InfoRow(label = "Descripción", value = description)
+    }
+}
+
 @Composable
 private fun MatchupHeader(
-    matchDate: MatchDateResponse
+    myClub: ClubResponse?,
+    rival: ClubResponse?
 ) {
-    val match = matchDate.match
-    if (match == null) {
+    if (myClub == null && rival == null) {
         NoMatchAssignedCard()
         return
     }
@@ -140,8 +201,8 @@ private fun MatchupHeader(
         verticalAlignment = Alignment.CenterVertically
     ) {
         MatchClubColumn(
-            club = match.homeClub,
-            label = "Local",
+            club = myClub,
+            label = "Mi club",
             modifier = Modifier.weight(1f)
         )
 
@@ -160,8 +221,8 @@ private fun MatchupHeader(
         }
 
         MatchClubColumn(
-            club = match.awayClub,
-            label = "Visitante",
+            club = rival,
+            label = "Rival",
             modifier = Modifier.weight(1f)
         )
     }
@@ -218,7 +279,9 @@ private fun NoMatchAssignedCard() {
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
         ),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
     ) {
         Column(
             modifier = Modifier
@@ -247,6 +310,8 @@ private fun formatScheduledTime(value: String): String {
     val time = value.substringAfter("T", missingDelimiterValue = value)
     return if (time.length >= 5) time.take(5) else time
 }
+
+private const val PREVIEW_MY_CLUB_ID = 1L
 
 private val previewHomeClub = ClubResponse(
     id = 1,
@@ -285,12 +350,50 @@ private val previewMatchDate = MatchDateResponse(
     updatedAt = "2026-07-25T14:45:00"
 )
 
+private val previewFinishedMatchDate = previewMatchDate.copy(
+    status = MatchDateStatus.FINISHED
+)
+
+private val previewMatchDateWithoutMatch = MatchDateResponse(
+    id = 4,
+    date = "2026-09-02",
+    status = MatchDateStatus.UPCOMING,
+    name = "Fecha 4"
+)
+
 @Preview
 @Composable
-private fun MatchDateDetailScreenPreview() {
+private fun MatchDateDetailScreenUpcomingPreview() {
     MaterialTheme {
         MatchDateDetailScreen(
             matchDate = previewMatchDate,
+            myClubId = PREVIEW_MY_CLUB_ID,
+            onBack = {},
+            onTabSelected = {}
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun MatchDateDetailScreenFinishedPreview() {
+    MaterialTheme {
+        MatchDateDetailScreen(
+            matchDate = previewFinishedMatchDate,
+            myClubId = PREVIEW_MY_CLUB_ID,
+            onBack = {},
+            onTabSelected = {}
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun MatchDateDetailScreenWithoutMatchPreview() {
+    MaterialTheme {
+        MatchDateDetailScreen(
+            matchDate = previewMatchDateWithoutMatch,
+            myClubId = PREVIEW_MY_CLUB_ID,
             onBack = {},
             onTabSelected = {}
         )

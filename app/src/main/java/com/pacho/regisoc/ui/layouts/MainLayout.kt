@@ -1,9 +1,6 @@
 package com.pacho.regisoc.ui.layouts
 
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -15,24 +12,31 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.res.painterResource
-import com.pacho.regisoc.R
 import androidx.compose.ui.tooling.preview.Preview
+import com.pacho.regisoc.ui.account.LocalAccountActions
+import com.pacho.regisoc.ui.components.AccountMenuButton
 
+/**
+ * Layout base de las pantallas autenticadas.
+ *
+ * El boton de cuenta (arriba a la derecha) se alimenta de [LocalAccountActions]:
+ * asi el menu "Sobre mi" / "Cerrar sesion" esta disponible en todas las pantallas
+ * sin propagar parametros por cada ruta.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainLayout(
     title: String,
     onBackClick: (() -> Unit)? = null,
-    onLogoClick: () -> Unit = {},
     selectedTab: Int = 0,
     onTabSelected: (Int) -> Unit = {},
     snackbarHost: @Composable () -> Unit = {},
     actions: @Composable RowScope.() -> Unit = {},
     content: @Composable (PaddingValues) -> Unit
 ) {
+    val accountActions = LocalAccountActions.current
+
     Scaffold(
         snackbarHost = snackbarHost,
         topBar = {
@@ -56,21 +60,13 @@ fun MainLayout(
                 },
                 actions = {
                     actions()
-                    IconButton(
-                        onClick = onLogoClick,
-                        modifier = Modifier
-                            .padding(end = 8.dp)
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                    ) {
-                        Image(
-                            painter = painterResource(R.drawable.compose_multiplatform),
-                            contentDescription = "Logo Club",
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
+                    AccountMenuButton(
+                        crestUrl = accountActions.clubCrestUrl,
+                        userName = accountActions.userName,
+                        onAboutClick = accountActions.onAboutClick,
+                        onLogoutClick = accountActions.onLogoutClick,
+                        modifier = Modifier.padding(end = 8.dp)
+                    )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface

@@ -6,6 +6,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -15,7 +16,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pacho.regisoc.di.AppModule
+import com.pacho.regisoc.ui.account.AccountActionsFactory
+import com.pacho.regisoc.ui.account.LocalAccountActions
 import com.pacho.regisoc.ui.components.LoadingOverlay
+import com.pacho.regisoc.ui.features.about.AboutRoute
 import com.pacho.regisoc.ui.features.club.ClubRoute
 import com.pacho.regisoc.ui.features.club.ClubViewModel
 import com.pacho.regisoc.ui.features.coach.CoachRoute
@@ -24,6 +28,8 @@ import com.pacho.regisoc.ui.features.event.EventRoute
 import com.pacho.regisoc.ui.features.event.EventViewModel
 import com.pacho.regisoc.ui.features.event.MatchDateViewModel
 import com.pacho.regisoc.ui.features.home.HomeRoute
+import com.pacho.regisoc.ui.features.lineup.LineupDetailRoute
+import com.pacho.regisoc.ui.features.lineup.LineupDetailViewModel
 import com.pacho.regisoc.ui.features.lineup.LineupRoute
 import com.pacho.regisoc.ui.features.lineup.LineupViewModel
 import com.pacho.regisoc.ui.features.login.LoginRoute
@@ -112,6 +118,11 @@ fun App() {
             sessionManager = sessionManager
         )
     }
+    val lineupDetailViewModel: LineupDetailViewModel = viewModel {
+        LineupDetailViewModel(
+            getLineupUseCase = appModule.getLineupUseCase
+        )
+    }
 
     val playerUiState by playerViewModel.uiState.collectAsState()
     val clubUiState by clubViewModel.uiState.collectAsState()
@@ -119,6 +130,7 @@ fun App() {
     val physicalTrainerUiState by physicalTrainerViewModel.uiState.collectAsState()
     val eventUiState by eventViewModel.uiState.collectAsState()
     val matchDateUiState by matchDateViewModel.uiState.collectAsState()
+    val sessionData by sessionManager.sessionData.collectAsState()
 
     val playerIsLoading by playerViewModel.isLoading.collectAsState()
     val clubIsLoading by clubViewModel.isLoading.collectAsState()
@@ -142,72 +154,97 @@ fun App() {
         }
     }
 
-    MaterialTheme {
-        val isLoading = playerIsLoading || clubIsLoading || coachIsLoading || physicalTrainerIsLoading || eventIsLoading
-        LoadingOverlay(isLoading = isLoading) {
-            Box(modifier = Modifier.fillMaxSize()) {
-                val snackbarHost: @Composable () -> Unit = { SnackbarHost(snackbarHostState) }
-                when (val screen = navigator.currentScreen) {
-                    is Screen.Login -> LoginRoute(
-                        viewModel = loginViewModel,
-                        sessionManager = sessionManager,
-                        navigator = navigator,
-                        snackbarHost = snackbarHost
-                    )
-                    is Screen.Home -> HomeRoute(
-                        uiState = clubUiState,
-                        navigator = navigator,
-                        snackbarHost = snackbarHost
-                    )
-                    is Screen.Club -> ClubRoute(
-                        screen = screen,
-                        uiState = clubUiState,
-                        viewModel = clubViewModel,
-                        navigator = navigator,
-                        snackbarHost = snackbarHost
-                    )
-                    is Screen.Event -> EventRoute(
-                        screen = screen,
-                        uiState = eventUiState,
-                        matchDateUiState = matchDateUiState,
-                        viewModel = eventViewModel,
-                        matchDateViewModel = matchDateViewModel,
-                        navigator = navigator,
-                        snackbarHost = snackbarHost
-                    )
-                    is Screen.Staff -> StaffRoute(
-                        uiState = playerUiState,
-                        coachUiState = coachUiState,
-                        physicalTrainerUiState = physicalTrainerUiState,
-                        viewModel = playerViewModel,
-                        coachViewModel = coachViewModel,
-                        physicalTrainerViewModel = physicalTrainerViewModel,
-                        navigator = navigator,
-                        selectedTab = selectedStaffTab,
-                        onSelectedTabChange = { selectedStaffTab = it },
-                        snackbarHost = snackbarHost
-                    )
-                    is Screen.Player -> PlayerRoute(
-                        screen = screen,
-                        viewModel = playerViewModel,
-                        navigator = navigator
-                    )
-                    is Screen.Coach -> CoachRoute(
-                        screen = screen,
-                        viewModel = coachViewModel,
-                        navigator = navigator
-                    )
-                    is Screen.PhysicalTrainer -> PhysicalTrainerRoute(
-                        screen = screen,
-                        viewModel = physicalTrainerViewModel,
-                        navigator = navigator
-                    )
-                    is Screen.Lineup -> LineupRoute(
-                        screen = screen,
-                        viewModel = lineupViewModel,
-                        navigator = navigator,
-                        snackbarHost = snackbarHost
-                    )
+    val accountActions = remember(sessionData, clubUiState) {
+        AccountActionsFactory.create(
+            sessionData = sessionData,
+            clubsState = clubUiState,
+            onAboutClick = { navigator.navigateTo(Screen.About) },
+            onLogoutClick = {
+                appModule.logoutUseCase()
+                navigator.navigateToLogin()
+            }
+        )
+    }
+
+    CompositionLocalProvider(LocalAccountActions provides accountActions) {
+        MaterialTheme {
+            val isLoading = playerIsLoading || clubIsLoading || coachIsLoading || physicalTrainerIsLoading || eventIsLoading
+            LoadingOverlay(isLoading = isLoading) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    val snackbarHost: @Composable () -> Unit = { SnackbarHost(snackbarHostState) }
+                    when (val screen = navigator.currentScreen) {
+                        is Screen.Login -> LoginRoute(
+                            viewModel = loginViewModel,
+                            sessionManager = sessionManager,
+                            navigator = navigator,
+                            snackbarHost = snackbarHost
+                        )
+                        is Screen.Home -> HomeRoute(
+                            uiState = clubUiState,
+                            navigator = navigator,
+                            snackbarHost = snackbarHost
+                        )
+                        is Screen.About -> AboutRoute(
+                            sessionManager = sessionManager,
+                            navigator = navigator,
+                            snackbarHost = snackbarHost
+                        )
+                        is Screen.Club -> ClubRoute(
+                            screen = screen,
+                            uiState = clubUiState,
+                            viewModel = clubViewModel,
+                            navigator = navigator,
+                            snackbarHost = snackbarHost
+                        )
+                        is Screen.Event -> EventRoute(
+                            screen = screen,
+                            uiState = eventUiState,
+                            matchDateUiState = matchDateUiState,
+                            viewModel = eventViewModel,
+                            matchDateViewModel = matchDateViewModel,
+                            navigator = navigator,
+                            snackbarHost = snackbarHost
+                        )
+                        is Screen.Staff -> StaffRoute(
+                            uiState = playerUiState,
+                            coachUiState = coachUiState,
+                            physicalTrainerUiState = physicalTrainerUiState,
+                            viewModel = playerViewModel,
+                            coachViewModel = coachViewModel,
+                            physicalTrainerViewModel = physicalTrainerViewModel,
+                            navigator = navigator,
+                            selectedTab = selectedStaffTab,
+                            onSelectedTabChange = { selectedStaffTab = it },
+                            snackbarHost = snackbarHost
+                        )
+                        is Screen.Player -> PlayerRoute(
+                            screen = screen,
+                            viewModel = playerViewModel,
+                            navigator = navigator
+                        )
+                        is Screen.Coach -> CoachRoute(
+                            screen = screen,
+                            viewModel = coachViewModel,
+                            navigator = navigator
+                        )
+                        is Screen.PhysicalTrainer -> PhysicalTrainerRoute(
+                            screen = screen,
+                            viewModel = physicalTrainerViewModel,
+                            navigator = navigator
+                        )
+                        is Screen.Lineup -> LineupRoute(
+                            screen = screen,
+                            viewModel = lineupViewModel,
+                            navigator = navigator,
+                            snackbarHost = snackbarHost
+                        )
+                        is Screen.LineupDetail -> LineupDetailRoute(
+                            screen = screen,
+                            viewModel = lineupDetailViewModel,
+                            navigator = navigator,
+                            snackbarHost = snackbarHost
+                        )
+                    }
                 }
             }
         }

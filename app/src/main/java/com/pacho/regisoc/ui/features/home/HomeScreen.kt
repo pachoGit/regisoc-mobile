@@ -66,74 +66,10 @@ fun HomeScreen(
                         EmptyEventsSection()
                     } else {
                         ActiveEventsList(activeClubs, onViewClub)
+                    }
+                }
             }
         }
-    }
-}
-
-        val mockActiveClubs = listOf(
-    ClubResponse(id = 1, name = "Torneo Apertura 2026", isActive = true, description = "Torneo de fútbol juvenil"),
-    ClubResponse(id = 2, name = "Copa Verano", isActive = true, description = "Competencia interclubes"),
-    ClubResponse(id = 3, name = "Liga Regional", isActive = true, description = "Liga de clubes locales")
-)
-
-@Preview
-@Composable
-fun HomeScreenWithEventsPreview() {
-    MaterialTheme {
-        HomeScreen(
-            uiState = ClubUiState.Success(mockActiveClubs),
-            onViewClub = {}
-        )
-    }
-}
-
-@Preview
-@Composable
-fun HomeScreenEmptyPreview() {
-    MaterialTheme {
-        HomeScreen(
-            uiState = ClubUiState.Success(emptyList()),
-            onViewClub = {}
-        )
-    }
-}
-
-@Preview
-@Composable
-fun HomeScreenLoadingPreview() {
-    MaterialTheme {
-        HomeScreen(
-            uiState = ClubUiState.Loading,
-            onViewClub = {}
-        )
-    }
-}
-
-@Preview
-@Composable
-fun HomeScreenErrorPreview() {
-    MaterialTheme {
-        HomeScreen(
-            uiState = ClubUiState.Error("Error al cargar eventos"),
-            onViewClub = {}
-        )
-    }
-}
-
-@Preview
-@Composable
-fun HomeScreenInactiveClubsPreview() {
-    val inactiveClubs = listOf(
-        ClubResponse(id = 1, name = "Torneo Pasado", isActive = false)
-    )
-    MaterialTheme {
-        HomeScreen(
-            uiState = ClubUiState.Success(inactiveClubs),
-            onViewClub = {}
-        )
-    }
-}
     }
 }
 

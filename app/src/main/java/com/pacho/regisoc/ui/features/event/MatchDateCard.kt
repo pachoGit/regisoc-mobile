@@ -7,7 +7,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Schedule
@@ -29,21 +29,36 @@ import com.pacho.regisoc.data.dto.ClubResponse
 import com.pacho.regisoc.data.dto.MatchDateResponse
 import com.pacho.regisoc.data.dto.MatchDateStatus
 import com.pacho.regisoc.data.dto.MatchResponse
-import com.pacho.regisoc.data.dto.MatchStatus
+import com.pacho.regisoc.domain.policy.MatchDateActionPolicy
+import com.pacho.regisoc.domain.policy.MatchDateActions
+import com.pacho.regisoc.domain.policy.myClub
+import com.pacho.regisoc.domain.policy.rivalClub
 
+/**
+ * Card de una fecha del evento.
+ *
+ * El menú de acciones se genera a partir de [MatchDateActionPolicy]: sin rival
+ * solo se puede ver el detalle; con rival, las opciones dependen del estado.
+ */
 @Composable
 fun MatchDateCard(
     matchDate: MatchDateResponse,
-    onView: () -> Unit,
+    myClubId: Long,
+    onViewDate: () -> Unit,
     onRegisterLineup: () -> Unit,
+    onViewMyLineup: () -> Unit,
+    onViewRivalLineup: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var showMenu by remember { mutableStateOf(false) }
+    val actions = remember(matchDate, myClubId) {
+        MatchDateActionPolicy.actionsFor(matchDate, myClubId)
+    }
 
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .clickable { onView() },
+            .clickable { onViewDate() },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
@@ -66,7 +81,7 @@ fun MatchDateCard(
                     .padding(16.dp)
             ) {
                 Text(
-                    text = "${matchDate.name}",
+                    text = matchDate.name,
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.Bold
                     ),
@@ -81,9 +96,10 @@ fun MatchDateCard(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                val match = matchDate.match
-                if (match != null) {
-                    MatchTeamsRow(match = match)
+                val myClub = matchDate.myClub(myClubId)
+                val rival = matchDate.rivalClub(myClubId)
+                if (rival != null) {
+                    MatchTeamsRow(myClub = myClub, rival = rival)
                 } else {
                     NoMatchAssignedRow()
                 }
@@ -98,7 +114,8 @@ fun MatchDateCard(
                         icon = Icons.Default.DateRange,
                         text = matchDate.date
                     )
-                    val scheduledTime = match?.scheduledTime?.let { formatScheduledTime(it) }
+                    val scheduledTime = matchDate.match?.scheduledTime
+                        ?.let { formatScheduledTime(it) }
                     if (!scheduledTime.isNullOrBlank()) {
                         Spacer(modifier = Modifier.width(16.dp))
                         MatchDateMeta(
@@ -123,66 +140,116 @@ fun MatchDateCard(
                         contentDescription = "Opciones"
                     )
                 }
-                DropdownMenu(
+                MatchDateActionsMenu(
                     expanded = showMenu,
-                    onDismissRequest = { showMenu = false },
-                    shape = RoundedCornerShape(16.dp),
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    shadowElevation = 8.dp,
-                    tonalElevation = 0.dp,
-                    offset = DpOffset(8.dp, 8.dp)
-                ) {
-                    DropdownMenuItem(
-                        text = { Text("Ver detalle") },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.Visibility,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        },
-                        onClick = {
-                            showMenu = false
-                            onView()
-                        }
-                    )
-                    HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 12.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
-                    if (matchDate.match != null) {
-                        DropdownMenuItem(
-                            text = { Text("Registrar plantilla") },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Default.Group,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            },
-                            onClick = {
-                                showMenu = false
-                                onRegisterLineup()
-                            }
-                        )
-                    }
-                }
+                    actions = actions,
+                    onDismiss = { showMenu = false },
+                    onViewDate = onViewDate,
+                    onRegisterLineup = onRegisterLineup,
+                    onViewMyLineup = onViewMyLineup,
+                    onViewRivalLineup = onViewRivalLineup
+                )
             }
         }
     }
 }
 
 @Composable
+private fun MatchDateActionsMenu(
+    expanded: Boolean,
+    actions: MatchDateActions,
+    onDismiss: () -> Unit,
+    onViewDate: () -> Unit,
+    onRegisterLineup: () -> Unit,
+    onViewMyLineup: () -> Unit,
+    onViewRivalLineup: () -> Unit
+) {
+    DropdownMenu(
+        expanded = expanded,
+        onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(16.dp),
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shadowElevation = 8.dp,
+        tonalElevation = 0.dp,
+        offset = DpOffset(8.dp, 8.dp)
+    ) {
+        if (actions.canViewDate) {
+            MenuActionItem(
+                label = "Ver detalle de la fecha",
+                icon = Icons.Default.Visibility,
+                onClick = {
+                    onDismiss()
+                    onViewDate()
+                }
+            )
+        }
+
+        if (actions.canRegisterLineup) {
+            MenuActionItem(
+                label = "Registrar plantilla",
+                icon = Icons.Default.Groups,
+                onClick = {
+                    onDismiss()
+                    onRegisterLineup()
+                }
+            )
+        }
+
+        if (actions.canViewMyLineup) {
+            MenuActionItem(
+                label = "Ver mi plantilla",
+                icon = Icons.Default.Groups,
+                onClick = {
+                    onDismiss()
+                    onViewMyLineup()
+                }
+            )
+        }
+
+        if (actions.canViewRivalLineup) {
+            MenuActionItem(
+                label = "Ver plantilla rival",
+                icon = Icons.Default.Groups,
+                onClick = {
+                    onDismiss()
+                    onViewRivalLineup()
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun MenuActionItem(
+    label: String,
+    icon: ImageVector,
+    onClick: () -> Unit
+) {
+    DropdownMenuItem(
+        text = { Text(label) },
+        leadingIcon = {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary
+            )
+        },
+        onClick = onClick
+    )
+}
+
+@Composable
 private fun MatchTeamsRow(
-    match: MatchResponse
+    myClub: ClubResponse?,
+    rival: ClubResponse?
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
         MatchTeamColumn(
-            label = "Local",
-            club = match.homeClub,
+            label = "Mi club",
+            club = myClub,
             modifier = Modifier.weight(1f)
         )
 
@@ -201,8 +268,8 @@ private fun MatchTeamsRow(
         }
 
         MatchTeamColumn(
-            label = "Visitante",
-            club = match.awayClub,
+            label = "Rival",
+            club = rival,
             modifier = Modifier.weight(1f)
         )
     }
@@ -304,6 +371,8 @@ private fun formatScheduledTime(value: String): String {
     return if (time.length >= 5) time.take(5) else time
 }
 
+private const val MY_CLUB_ID = 1L
+
 private val previewHomeClub = ClubResponse(
     id = 1,
     name = "Club Deportivo Estrella",
@@ -324,21 +393,26 @@ private val previewMatch = MatchResponse(
     id = 1,
     homeClub = previewHomeClub,
     awayClub = previewAwayClub,
-    scheduledTime = "2026-03-16T16:00:00",
-    status = MatchStatus.UPCOMING
+    scheduledTime = "2026-03-16T16:00:00"
 )
 
 private val previewMatchDate = MatchDateResponse(
     id = 1,
     date = "2026-08-05",
     location = "Estadio Central",
-    status = MatchDateStatus.ONGOING,
+    status = MatchDateStatus.UPCOMING,
     name = "Fecha 10",
     match = previewMatch
 )
 
-private val previewMatchDateWithoutMatch = MatchDateResponse(
+private val previewFinishedMatchDate = previewMatchDate.copy(
     id = 2,
+    status = MatchDateStatus.FINISHED,
+    name = "Fecha 9"
+)
+
+private val previewMatchDateWithoutMatch = MatchDateResponse(
+    id = 3,
     date = "2026-08-19",
     status = MatchDateStatus.UPCOMING,
     name = "Fecha 11"
@@ -346,12 +420,30 @@ private val previewMatchDateWithoutMatch = MatchDateResponse(
 
 @Preview
 @Composable
-private fun MatchDateCardPreview() {
+private fun MatchDateCardUpcomingPreview() {
     MaterialTheme {
         MatchDateCard(
             matchDate = previewMatchDate,
-            onView = {},
-            onRegisterLineup = {}
+            myClubId = MY_CLUB_ID,
+            onViewDate = {},
+            onRegisterLineup = {},
+            onViewMyLineup = {},
+            onViewRivalLineup = {}
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun MatchDateCardFinishedPreview() {
+    MaterialTheme {
+        MatchDateCard(
+            matchDate = previewFinishedMatchDate,
+            myClubId = MY_CLUB_ID,
+            onViewDate = {},
+            onRegisterLineup = {},
+            onViewMyLineup = {},
+            onViewRivalLineup = {}
         )
     }
 }
@@ -362,8 +454,11 @@ private fun MatchDateCardWithoutMatchPreview() {
     MaterialTheme {
         MatchDateCard(
             matchDate = previewMatchDateWithoutMatch,
-            onView = {},
-            onRegisterLineup = {}
+            myClubId = MY_CLUB_ID,
+            onViewDate = {},
+            onRegisterLineup = {},
+            onViewMyLineup = {},
+            onViewRivalLineup = {}
         )
     }
 }

@@ -45,7 +45,9 @@ data class LineupPlayerResponse(
     val age: Int,
     val dateOfBirth: String,
     val position: PlayerPosition? = null,
-    val photoUrl: String? = null
+    val photoUrl: String? = null,
+    @SerialName("documentFrontUrl") val documentFrontUrl: String? = null,
+    @SerialName("documentBackUrl") val documentBackUrl: String? = null
 )
 
 @Serializable
@@ -56,7 +58,9 @@ data class LineupCoachResponse(
     val documentNumber: String,
     val age: Int,
     val dateOfBirth: String,
-    val photoUrl: String? = null
+    val photoUrl: String? = null,
+    @SerialName("documentFrontUrl") val documentFrontUrl: String? = null,
+    @SerialName("documentBackUrl") val documentBackUrl: String? = null
 )
 
 @Serializable
@@ -67,5 +71,7 @@ data class LineupPhysicalTrainerResponse(
     val documentNumber: String,
     val age: Int,
     val dateOfBirth: String,
-    val photoUrl: String? = null
+    val photoUrl: String? = null,
+    @SerialName("documentFrontUrl") val documentFrontUrl: String? = null,
+    @SerialName("documentBackUrl") val documentBackUrl: String? = null
 )

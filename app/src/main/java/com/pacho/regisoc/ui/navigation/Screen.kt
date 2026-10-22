@@ -11,6 +11,7 @@ import com.pacho.regisoc.data.dto.PlayerResponse
 sealed class Screen {
     data object Login : Screen()
     data object Home : Screen()
+    data object About : Screen()
 
     sealed class Club : Screen() {
         data object List : Club()
@@ -54,5 +55,18 @@ sealed class Screen {
         val match: MatchResponse,
         val matchDate: MatchDateResponse,
         val event: EventResponse
+    ) : Screen()
+
+    /**
+     * Detalle de solo lectura de una planilla ya registrada, propia o rival.
+     * [lineupClubId] es el club dueño de la planilla a consultar.
+     */
+    data class LineupDetail(
+        val match: MatchResponse,
+        val matchDate: MatchDateResponse,
+        val event: EventResponse,
+        val lineupClubId: Long,
+        val clubName: String,
+        val isMine: Boolean
     ) : Screen()
 }

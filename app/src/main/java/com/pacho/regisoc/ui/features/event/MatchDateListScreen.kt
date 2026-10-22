@@ -28,11 +28,12 @@ import com.pacho.regisoc.data.dto.MatchResponse
 fun MatchDateListScreen(
     event: EventResponse,
     uiState: MatchDateUiState,
+    myClubId: Long,
     onLoad: () -> Unit,
-    onBack: () -> Unit,
-    onTabSelected: (Int) -> Unit,
     onViewDate: (MatchDateResponse) -> Unit,
-    onRegisterLineup: (MatchDateResponse) -> Unit
+    onRegisterLineup: (MatchDateResponse) -> Unit,
+    onViewMyLineup: (MatchDateResponse) -> Unit,
+    onViewRivalLineup: (MatchDateResponse) -> Unit
 ) {
     LaunchedEffect(Unit) {
         onLoad()
@@ -60,8 +61,11 @@ fun MatchDateListScreen(
                         MatchDatesContent(
                             event = event,
                             matchDates = matchDates,
+                            myClubId = myClubId,
                             onViewDate = onViewDate,
-                            onRegisterLineup = onRegisterLineup
+                            onRegisterLineup = onRegisterLineup,
+                            onViewMyLineup = onViewMyLineup,
+                            onViewRivalLineup = onViewRivalLineup
                         )
                     }
                 }
@@ -73,8 +77,11 @@ fun MatchDateListScreen(
 private fun MatchDatesContent(
     event: EventResponse,
     matchDates: List<MatchDateResponse>,
+    myClubId: Long,
     onViewDate: (MatchDateResponse) -> Unit,
-    onRegisterLineup: (MatchDateResponse) -> Unit
+    onRegisterLineup: (MatchDateResponse) -> Unit,
+    onViewMyLineup: (MatchDateResponse) -> Unit,
+    onViewRivalLineup: (MatchDateResponse) -> Unit
 ) {
     LazyColumn(
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 96.dp),
@@ -97,8 +104,11 @@ private fun MatchDatesContent(
                 items(group, key = { it.id }) { matchDate ->
                     MatchDateCard(
                         matchDate = matchDate,
-                        onView = { onViewDate(matchDate) },
-                        onRegisterLineup = { onRegisterLineup(matchDate) }
+                        myClubId = myClubId,
+                        onViewDate = { onViewDate(matchDate) },
+                        onRegisterLineup = { onRegisterLineup(matchDate) },
+                        onViewMyLineup = { onViewMyLineup(matchDate) },
+                        onViewRivalLineup = { onViewRivalLineup(matchDate) }
                     )
                 }
             }
@@ -330,6 +340,8 @@ private val previewMatchDates = listOf(
     )
 )
 
+private const val PREVIEW_MY_CLUB_ID = 1L
+
 @Preview
 @Composable
 private fun MatchDateListScreenSuccessPreview() {
@@ -337,11 +349,12 @@ private fun MatchDateListScreenSuccessPreview() {
         MatchDateListScreen(
             event = previewEvent,
             uiState = MatchDateUiState.Success(previewMatchDates),
+            myClubId = PREVIEW_MY_CLUB_ID,
             onLoad = {},
-            onBack = {},
-            onTabSelected = {},
             onViewDate = {},
-            onRegisterLineup = {}
+            onRegisterLineup = {},
+            onViewMyLineup = {},
+            onViewRivalLineup = {}
         )
     }
 }
@@ -353,11 +366,12 @@ private fun MatchDateListScreenEmptyPreview() {
         MatchDateListScreen(
             event = previewEvent,
             uiState = MatchDateUiState.Success(emptyList()),
+            myClubId = PREVIEW_MY_CLUB_ID,
             onLoad = {},
-            onBack = {},
-            onTabSelected = {},
             onViewDate = {},
-            onRegisterLineup = {}
+            onRegisterLineup = {},
+            onViewMyLineup = {},
+            onViewRivalLineup = {}
         )
     }
 }
@@ -369,11 +383,12 @@ private fun MatchDateListScreenErrorPreview() {
         MatchDateListScreen(
             event = previewEvent,
             uiState = MatchDateUiState.Error("Error al cargar fechas"),
+            myClubId = PREVIEW_MY_CLUB_ID,
             onLoad = {},
-            onBack = {},
-            onTabSelected = {},
             onViewDate = {},
-            onRegisterLineup = {}
+            onRegisterLineup = {},
+            onViewMyLineup = {},
+            onViewRivalLineup = {}
         )
     }
 }
@@ -385,11 +400,12 @@ private fun MatchDateListScreenLoadingPreview() {
         MatchDateListScreen(
             event = previewEvent,
             uiState = MatchDateUiState.Loading,
+            myClubId = PREVIEW_MY_CLUB_ID,
             onLoad = {},
-            onBack = {},
-            onTabSelected = {},
             onViewDate = {},
-            onRegisterLineup = {}
+            onRegisterLineup = {},
+            onViewMyLineup = {},
+            onViewRivalLineup = {}
         )
     }
 }

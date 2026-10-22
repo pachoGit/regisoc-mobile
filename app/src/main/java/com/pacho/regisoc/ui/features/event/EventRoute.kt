@@ -1,6 +1,10 @@
 package com.pacho.regisoc.ui.features.event
 
 import androidx.compose.runtime.Composable
+import com.pacho.regisoc.data.dto.EventResponse
+import com.pacho.regisoc.data.dto.MatchDateResponse
+import com.pacho.regisoc.domain.policy.myClub
+import com.pacho.regisoc.domain.policy.rivalClub
 import com.pacho.regisoc.ui.layouts.MainLayout
 import com.pacho.regisoc.ui.navigation.AppNavigator
 import com.pacho.regisoc.ui.navigation.Screen
@@ -71,12 +75,29 @@ fun EventRoute(
                 MatchDateListScreen(
                     event = screen.event,
                     uiState = matchDateUiState,
+                    myClubId = matchDateViewModel.clubId,
                     onLoad = { matchDateViewModel.loadMatchDates(screen.event.id) },
-                    onBack = { navigator.navigateTo(Screen.Event.Detail(screen.event)) },
-                    onTabSelected = navigator::navigateToTab,
                     onViewDate = { navigator.navigateTo(Screen.Event.MatchDateDetail(screen.event, it)) },
                     onRegisterLineup = { matchDate ->
                         matchDate.match?.let { navigator.navigateTo(Screen.Lineup(it, matchDate, screen.event)) }
+                    },
+                    onViewMyLineup = { matchDate ->
+                        navigateToLineupDetail(
+                            navigator = navigator,
+                            event = screen.event,
+                            matchDate = matchDate,
+                            myClubId = matchDateViewModel.clubId,
+                            isMine = true
+                        )
+                    },
+                    onViewRivalLineup = { matchDate ->
+                        navigateToLineupDetail(
+                            navigator = navigator,
+                            event = screen.event,
+                            matchDate = matchDate,
+                            myClubId = matchDateViewModel.clubId,
+                            isMine = false
+                        )
                     }
                 )
             }
@@ -84,12 +105,61 @@ fun EventRoute(
         is Screen.Event.MatchDateDetail -> {
             MatchDateDetailScreen(
                 matchDate = screen.matchDate,
+                myClubId = matchDateViewModel.clubId,
                 onBack = { navigator.navigateTo(Screen.Event.MatchDateList(screen.event)) },
                 onTabSelected = navigator::navigateToTab,
-                onOpenLineup = {
+                onRegisterLineup = {
                     screen.matchDate.match?.let { navigator.navigateTo(Screen.Lineup(it, screen.matchDate, screen.event)) }
+                },
+                onViewMyLineup = {
+                    navigateToLineupDetail(
+                        navigator = navigator,
+                        event = screen.event,
+                        matchDate = screen.matchDate,
+                        myClubId = matchDateViewModel.clubId,
+                        isMine = true
+                    )
+                },
+                onViewRivalLineup = {
+                    navigateToLineupDetail(
+                        navigator = navigator,
+                        event = screen.event,
+                        matchDate = screen.matchDate,
+                        myClubId = matchDateViewModel.clubId,
+                        isMine = false
+                    )
                 }
             )
         }
     }
+}
+
+/**
+ * Navega al detalle de la plantilla propia o rival de una fecha.
+ * Resuelve el club dueño de la planilla a partir de [isMine] y del club del usuario.
+ */
+private fun navigateToLineupDetail(
+    navigator: AppNavigator,
+    event: EventResponse,
+    matchDate: MatchDateResponse,
+    myClubId: Long,
+    isMine: Boolean
+) {
+    val match = matchDate.match ?: return
+    val lineupClub = if (isMine) {
+        matchDate.myClub(myClubId)
+    } else {
+        matchDate.rivalClub(myClubId)
+    } ?: return
+
+    navigator.navigateTo(
+        Screen.LineupDetail(
+            match = match,
+            matchDate = matchDate,
+            event = event,
+            lineupClubId = lineupClub.id,
+            clubName = lineupClub.name,
+            isMine = isMine
+        )
+    )
 }
